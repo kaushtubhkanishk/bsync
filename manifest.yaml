@@ -1,13 +1,12 @@
-- name: fastfetch
-  path: /home/kaushtubhkanishk/Documents/source_builds/fastfetch/
+- bin_path: /usr/bin/fastfetch
+  build_bin_path: /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build/fastfetch
+  build_steps:
+    - rm -rf /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build
+    - mkdir -p /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build
+    - cmake -S /home/kaushtubhkanishk/Documents/source_builds/fastfetch -B /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build
+    - cmake --build /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build --target fastfetch -j 10
+  current_version: 2.60.0
   git_repo: fastfetch
   git_author: fastfetch-cli
-  current_version: 2.50.0
-  bin_path: /usr/bin/fastfetch
-  build_steps:
-    - "rm -rf {path}/build"
-    - "mkdir -p {path}/build"
-    - "cmake -S {path} -B {path}/build"
-    - "cmake --build {path}/build --target fastfetch -j 10"
-  build_bin_path: /home/kaushtubhkanishk/Documents/source_builds/fastfetch/build/fastfetch
-
+  name: fastfetch
+  path: /home/kaushtubhkanishk/Documents/source_builds/fastfetch

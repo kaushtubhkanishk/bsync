@@ -15,7 +15,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var packageDir = os.Getenv("SOURCE_BUILD_DIR")
+const gitRestUrl = "https://api.github.com/repos"
+
+var (
+	packageDir   = os.Getenv("SOURCE_BUILD_DIR")
+	manifestPath = os.Getenv("SOURCE_MANIFEST_PATH")
+)
 
 type Package struct {
 	BinPath        string   `yaml:"bin_path"`
@@ -37,11 +42,11 @@ func main() {
 
 	for _, entry := range entries {
 		if entry.IsDir() {
-			fmt.Println("Dir: ", entry.Name())
+			fmt.Println("Package: ", entry.Name())
 		}
 	}
 
-	fileContent, err := os.ReadFile("./manifest.yaml")
+	fileContent, err := os.ReadFile(manifestPath)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +58,7 @@ func main() {
 		panic(err)
 	}
 
-	for _, pack := range packs {
+	for i, pack := range packs {
 		pack.Path = strings.TrimSuffix(pack.Path, "/")
 
 		err = pack.FetchLatestVersion()
@@ -63,17 +68,23 @@ func main() {
 
 		if pack.latestVersion != pack.CurrentVersion {
 			fmt.Printf("New version found, current version: %v, new version: %v\n", pack.CurrentVersion, pack.latestVersion)
+
 			err = pack.Update()
 			if err != nil {
 				panic(err)
 			}
+
+			packs[i].CurrentVersion = pack.latestVersion
 		}
 	}
 
+	err = UpdateManifest(&packs)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (p *Package) FetchLatestVersion() error {
-	gitRestUrl := "https://api.github.com/repos"
 	latestVersionUrl, err := url.JoinPath(gitRestUrl, p.GitAuthor, p.GitRepo, "releases", "latest")
 	if err != nil {
 		errMsg := fmt.Sprintf("error formulating git remote url: %v", err.Error())
@@ -127,13 +138,13 @@ func (p *Package) Update() error {
 		return errors.New(errMsg)
 	}
 
+	p.CurrentVersion = p.latestVersion
+
 	return nil
 }
 func (p *Package) executeBuildSteps() error {
 	fmt.Println("Running build")
 	for i, step := range p.BuildSteps {
-		fmt.Println(step)
-		fmt.Println(p.Path)
 		p.BuildSteps[i] = strings.ReplaceAll(step, "{path}", p.Path)
 		fmt.Println(p.BuildSteps[i])
 	}
@@ -188,6 +199,25 @@ func (p *Package) copyToBinPath() error {
 	err = os.Chmod(p.BinPath, sourceInfo.Mode())
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to change permissions of the binary: %v", err.Error())
+		return errors.New(errMsg)
+	}
+
+	fmt.Println("Successfully copied built binary to bin path")
+	fmt.Println(p.BinPath)
+
+	return nil
+}
+
+func UpdateManifest(packs *[]Package) error {
+	yamlContent, err := yaml.Marshal(packs)
+	if err != nil {
+		errMsg := fmt.Sprintf("error marshalling the yaml file: %v", err.Error())
+		return errors.New(errMsg)
+	}
+
+	err = os.WriteFile(manifestPath, yamlContent, os.ModePerm)
+	if err != nil {
+		errMsg := fmt.Sprintf("error writing yaml file: %v", err.Error())
 		return errors.New(errMsg)
 	}
 
