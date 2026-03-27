@@ -69,6 +69,10 @@ func (p *Package) FetchLatestVersion() error {
 }
 
 func (p *Package) Update() error {
+	if p.LatestVersion == "" {
+		return errors.New("latest version is not set, please run Fetch first")
+	}
+
 	err := p.checkoutLatestTag()
 	if err != nil {
 		errMsg := fmt.Sprintf("error checking out latest git tag: %v", err.Error())
@@ -93,14 +97,14 @@ func (p *Package) Update() error {
 }
 
 func (p *Package) checkoutLatestTag() error {
-	outFetch, err := exec.Command("git", "-C", p.Path, "fetch", "--tags").Output()
+	outFetch, err := exec.Command("git", "-C", p.Path, "fetch", "--tags").CombinedOutput()
 	if err != nil {
 		errMsg := fmt.Sprintf("error running git fetch: %v", err.Error())
 		return errors.New(errMsg)
 	}
 	fmt.Println(string(outFetch))
 
-	outCheckout, err := exec.Command("git", "-C", p.Path, "checkout", p.LatestVersion).Output()
+	outCheckout, err := exec.Command("git", "-C", p.Path, "checkout", p.LatestVersion).CombinedOutput()
 	if err != nil {
 		errMsg := fmt.Sprintf("error running git checkout: %v", err.Error())
 		return errors.New(errMsg)
@@ -114,16 +118,13 @@ func (p *Package) checkoutLatestTag() error {
 
 func (p *Package) executeBuildSteps() error {
 	fmt.Println("Running build")
-	for i, step := range p.BuildSteps {
-		p.BuildSteps[i] = strings.ReplaceAll(step, "{path}", p.Path)
-		fmt.Println(p.BuildSteps[i])
-	}
 
 	for _, step := range p.BuildSteps {
+		expanded := strings.ReplaceAll(step, "{path}", p.Path)
 		fmt.Printf("Step: %v\n", step)
-		fields := strings.Fields(step)
+		fields := strings.Fields(expanded)
 
-		out, err := exec.Command(fields[0], fields[1:]...).Output()
+		out, err := exec.Command(fields[0], fields[1:]...).CombinedOutput()
 		if err != nil {
 			errMsg := fmt.Sprintf("error running build step: %v, error: %v", step, err.Error())
 			return errors.New(errMsg)
