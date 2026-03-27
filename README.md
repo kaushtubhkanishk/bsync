@@ -39,4 +39,4 @@ export SOURCE_BUILD_DIR='/path/to/source/repos/'
 export SOURCE_MANIFEST_PATH='/path/to/config/'
 ```
 
-Packages are defined in YAML files under SOURCE_MANIFEST. Each file describes one source-built package.
+Packages are defined in YAML files under SOURCE_MANIFEST.
